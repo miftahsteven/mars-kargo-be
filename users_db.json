@@ -1,0 +1,29 @@
+[
+  {
+    "id": "user-default-01",
+    "fullName": "Rudi Kurir",
+    "phone": "081234567890",
+    "email": "rudi.kurir@marscargo.com",
+    "gender": "Laki-laki",
+    "nip": "MK-9042",
+    "password": "••••••••",
+    "isActivated": true,
+    "assignedZone": "Jakarta Pusat",
+    "createdAt": "2026-07-26T07:24:30.124Z",
+    "updatedAt": "2026-07-26T07:24:30.124Z"
+  },
+  {
+    "fullName": "mscode",
+    "phone": "08558833224",
+    "email": "mscodx@gmail.com",
+    "gender": "Laki-laki",
+    "nip": "MK-3145",
+    "password": "G-9436",
+    "googleId": "111186637374069729086",
+    "isActivated": true,
+    "assignedZone": "Jakarta Pusat",
+    "id": "usr-1785057583752-0orx6",
+    "createdAt": "2026-07-26T09:19:43.752Z",
+    "updatedAt": "2026-07-26T09:19:43.752Z"
+  }
+]

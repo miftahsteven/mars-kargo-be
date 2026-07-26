@@ -1,0 +1,112 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String           @id @default(uuid())
+  fullName        String
+  phone           String
+  email           String           @unique
+  gender          String
+  nip             String           @unique
+  password        String
+  activationToken String?          @unique
+  isActivated     Boolean          @default(false)
+  googleId        String?          @unique
+  avatarUrl       String?
+  assignedZone    String           @default("Jakarta Pusat")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  courierProfile  CourierProfile?
+  activityLogs    ActivityLog[]
+  scanLogs        ScanLog[]
+  gpsLogs         GPSLocationLog[]
+  deliveryTasks   DeliveryTask[]
+  notifications   Notification[]
+}
+
+model CourierProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nip             String   @unique
+  statusOnline    Boolean  @default(true)
+  assignedZone    String   @default("Jakarta Pusat")
+  totalDeliveries Int      @default(0)
+  activeTaskCount Int      @default(0)
+  lastGpsLat      Float?
+  lastGpsLng      Float?
+  updatedAt       DateTime @updatedAt
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actionType  String   // REGISTER, LOGIN, LOGOUT, SCAN_BARCODE, UPDATE_STATUS, GPS_UPDATE
+  description String
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+}
+
+model ScanLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  resi        String
+  barcodeData String
+  latitude    Float?
+  longitude   Float?
+  address     String?
+  createdAt   DateTime @default(now())
+}
+
+model GPSLocationLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  latitude  Float
+  longitude Float
+  isOnline  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model DeliveryTask {
+  id                  String   @id @default(uuid())
+  resi                String   @unique
+  recipientName       String
+  recipientAddress    String
+  recipientPhone      String
+  status              String   @default("Siap Deliver") // Siap Deliver, Dalam Transit, Kendala, Terkirim
+  weightKg            Float    @default(1.0)
+  itemsCount          Int      @default(1)
+  category            String   @default("Buku / Bahan Bacaan")
+  latitude            Float?
+  longitude           Float?
+  proofPhotoUrl       String?
+  proofSignatureUrl   String?
+  recipientSignedName String?
+  notes               String?
+  courierId           String?
+  courier             User?    @relation(fields: [courierId], references: [id], onDelete: SetNull)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, TASK, ALERT, SYSTEM
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
