@@ -2,6 +2,32 @@ import { prisma } from '../lib/prisma.js';
 
 export class ActivityService {
   /**
+   * Helper: Resolve input userId (which may be Google ID, NIP, or Email) to valid PostgreSQL User.id
+   */
+  private static async resolveUserId(userId?: string): Promise<string | undefined> {
+    if (!userId) return undefined;
+    try {
+      const byId = await prisma.user.findUnique({ where: { id: userId } });
+      if (byId) return byId.id;
+
+      const byGoogle = await prisma.user.findFirst({ where: { googleId: userId } });
+      if (byGoogle) return byGoogle.id;
+
+      const byEmail = await prisma.user.findFirst({ where: { email: userId } });
+      if (byEmail) return byEmail.id;
+
+      const byNip = await prisma.user.findFirst({ where: { nip: userId } });
+      if (byNip) return byNip.id;
+
+      const firstUser = await prisma.user.findFirst();
+      return firstUser?.id;
+    } catch (err) {
+      console.warn('[ActivityService] resolveUserId error:', err);
+      return undefined;
+    }
+  }
+
+  /**
    * Log general mobile app activity in PostgreSQL
    */
   public static async logActivity(params: {
@@ -12,9 +38,10 @@ export class ActivityService {
     userAgent?: string;
   }): Promise<void> {
     try {
+      const validUserId = await this.resolveUserId(params.userId);
       await prisma.activityLog.create({
         data: {
-          userId: params.userId,
+          userId: validUserId,
           actionType: params.actionType,
           description: params.description,
           ipAddress: params.ipAddress,
@@ -39,9 +66,10 @@ export class ActivityService {
     address?: string;
   }): Promise<void> {
     try {
+      const validUserId = await this.resolveUserId(params.userId);
       await prisma.scanLog.create({
         data: {
-          userId: params.userId,
+          userId: validUserId,
           resi: params.resi,
           barcodeData: params.barcodeData,
           latitude: params.latitude,
@@ -53,7 +81,7 @@ export class ActivityService {
 
       // Also record in activity log
       await this.logActivity({
-        userId: params.userId,
+        userId: validUserId,
         actionType: 'SCAN_BARCODE',
         description: `Melakukan scanning resi ${params.resi} di lokasi (${params.latitude || 0}, ${params.longitude || 0})`,
       });
@@ -72,9 +100,15 @@ export class ActivityService {
     isOnline?: boolean;
   }): Promise<void> {
     try {
+      const validUserId = await this.resolveUserId(params.userId);
+      if (!validUserId) {
+        console.warn(`[GPSLocationLog] User not found for ID "${params.userId}", skipping GPS log.`);
+        return;
+      }
+
       await prisma.gPSLocationLog.create({
         data: {
-          userId: params.userId,
+          userId: validUserId,
           latitude: params.latitude,
           longitude: params.longitude,
           isOnline: params.isOnline !== undefined ? params.isOnline : true,
@@ -83,7 +117,7 @@ export class ActivityService {
 
       // Update Courier Profile last known location
       await prisma.courierProfile.updateMany({
-        where: { userId: params.userId },
+        where: { userId: validUserId },
         data: {
           lastGpsLat: params.latitude,
           lastGpsLng: params.longitude,

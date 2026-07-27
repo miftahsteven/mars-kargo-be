@@ -251,7 +251,7 @@ export class PackageController {
 
       res.status(200).json({
         success: true,
-        message: `Laporan kendala resi ${resi} berhasil disimpan ke database.`,
+        message: `Laporan kendala resi ${resi} berhasil disimpan.`,
         data: {
           issueLog,
           updatedTask,
@@ -371,7 +371,7 @@ export class PackageController {
 
       res.status(200).json({
         success: true,
-        message: `Lokasi paket ${resi} (${lat}, ${lng}) berhasil diperbarui ke database.`,
+        message: `Lokasi terkini paket ${resi} berhasil diperbarui.`,
         data: updatedTask,
       });
     } catch (error) {
@@ -391,8 +391,17 @@ export class PackageController {
       }
 
       const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      let ext = 'png';
+      if (base64.includes('image/bmp')) {
+        ext = 'bmp';
+      } else if (base64.includes('image/jpeg') || base64.includes('image/jpg')) {
+        ext = 'jpg';
+      } else if (base64.includes('image/svg')) {
+        ext = 'svg';
+      }
+
       const buffer = matches ? Buffer.from(matches[2], 'base64') : Buffer.from(base64, 'base64');
-      const filename = `${prefix || 'img'}_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
+      const filename = `${prefix || 'img'}_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
 
       const uploadDir = path.join(process.cwd(), 'uploads');
       if (!fs.existsSync(uploadDir)) {
