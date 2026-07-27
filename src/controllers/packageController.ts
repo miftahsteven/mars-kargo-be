@@ -58,23 +58,37 @@ export class PackageController {
   public static async updateStatus(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { status, recipientSignedName, proofPhotoUrl, proofSignatureUrl, notes, latitude, longitude } = req.body;
+      const { status, recipientSignedName, proofPhotoUrl, pickupPhotoUrl, proofSignatureUrl, notes, latitude, longitude } = req.body;
 
       let updatedTask: any = null;
       try {
-        updatedTask = await prisma.deliveryTask.update({
-          where: { id },
-          data: {
-            status,
-            recipientSignedName,
-            proofPhotoUrl,
-            proofSignatureUrl,
-            notes,
-            latitude: latitude ? parseFloat(latitude) : undefined,
-            longitude: longitude ? parseFloat(longitude) : undefined,
+        const existing = await prisma.deliveryTask.findFirst({
+          where: {
+            OR: [
+              { id },
+              { resi: { equals: id.trim(), mode: 'insensitive' } },
+            ],
           },
         });
-      } catch (e) {}
+
+        if (existing) {
+          updatedTask = await prisma.deliveryTask.update({
+            where: { id: existing.id },
+            data: {
+              status: status || existing.status,
+              recipientSignedName: recipientSignedName || existing.recipientSignedName,
+              proofPhotoUrl: proofPhotoUrl || existing.proofPhotoUrl,
+              pickupPhotoUrl: pickupPhotoUrl || existing.pickupPhotoUrl,
+              proofSignatureUrl: proofSignatureUrl || existing.proofSignatureUrl,
+              notes: notes || existing.notes,
+              latitude: latitude ? parseFloat(latitude) : existing.latitude,
+              longitude: longitude ? parseFloat(longitude) : existing.longitude,
+            },
+          });
+        }
+      } catch (e) {
+        console.warn('[PackageController] Error updating status:', e);
+      }
 
       res.status(200).json({
         success: true,
@@ -99,6 +113,7 @@ export class PackageController {
         category,
         weightKg,
         itemsCount,
+        pickupPhotoUrl,
         notes,
         courierId,
         latitude,
@@ -121,6 +136,7 @@ export class PackageController {
             where: { id: existing.id },
             data: {
               status: 'pickup',
+              pickupPhotoUrl: pickupPhotoUrl || existing.pickupPhotoUrl,
               courierId: courierId || existing.courierId,
               notes: notes || existing.notes || 'Dipickup oleh kurir',
               latitude: latitude ? parseFloat(latitude) : existing.latitude,
@@ -138,6 +154,7 @@ export class PackageController {
               weightKg: weightKg ? parseFloat(weightKg) : 1.0,
               itemsCount: itemsCount ? parseInt(itemsCount, 10) : 1,
               status: 'pickup',
+              pickupPhotoUrl: pickupPhotoUrl || null,
               notes: notes || 'Dipickup oleh kurir dari scan barcode',
               courierId: courierId || null,
               latitude: latitude ? parseFloat(latitude) : undefined,
@@ -155,6 +172,7 @@ export class PackageController {
           recipientPhone: recipientPhone || '-',
           status: 'pickup',
           category: category || 'BUKU',
+          pickupPhotoUrl: pickupPhotoUrl || null,
           createdAt: new Date().toISOString(),
         };
       }

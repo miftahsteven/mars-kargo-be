@@ -90,6 +90,7 @@ model DeliveryTask {
   category            String   @default("Buku / Bahan Bacaan")
   latitude            Float?
   longitude           Float?
+  pickupPhotoUrl      String?
   proofPhotoUrl       String?
   proofSignatureUrl   String?
   recipientSignedName String?
