@@ -5,6 +5,7 @@ const router = Router();
 
 router.get('/', PackageController.getPackages);
 router.get('/:resi', PackageController.getPackageByResi);
+router.post('/pickup', PackageController.pickupPackage);
 router.patch('/:id/status', PackageController.updateStatus);
 
 export default router;
