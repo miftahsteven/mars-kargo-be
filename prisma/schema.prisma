@@ -111,3 +111,16 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model IssueReport {
+  id          String   @id @default(uuid())
+  resi        String
+  description String
+  newAddress  String?
+  newPhone    String?
+  latitude    Float?
+  longitude   Float?
+  courierId   String?
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now())
+}
