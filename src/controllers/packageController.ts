@@ -134,13 +134,22 @@ export class PackageController {
         });
 
         if (existing) {
+          if (existing.status === 'Delivered' || existing.status === 'Terkirim') {
+            res.status(400).json({
+              success: false,
+              message: `Paket resi ${resi} sudah berstatus Delivered (Terkirim) dan tidak dapat di-pickup kembali.`,
+              data: existing,
+            });
+            return;
+          }
+
           task = await prisma.deliveryTask.update({
             where: { id: existing.id },
             data: {
-              status: 'pickup',
+              status: 'Dalam Transit',
               pickupPhotoUrl: pickupPhotoUrl || existing.pickupPhotoUrl,
               courierId: courierId || existing.courierId,
-              notes: notes || existing.notes || 'Dipickup oleh kurir',
+              notes: notes || existing.notes || 'Dipickup oleh kurir dari scan barcode',
               latitude: latitude ? parseFloat(latitude) : existing.latitude,
               longitude: longitude ? parseFloat(longitude) : existing.longitude,
             },
@@ -155,7 +164,7 @@ export class PackageController {
               category: category || 'BUKU',
               weightKg: weightKg ? parseFloat(weightKg) : 1.0,
               itemsCount: itemsCount ? parseInt(itemsCount, 10) : 1,
-              status: 'pickup',
+              status: 'Dalam Transit',
               pickupPhotoUrl: pickupPhotoUrl || null,
               notes: notes || 'Dipickup oleh kurir dari scan barcode',
               courierId: courierId || null,
