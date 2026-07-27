@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'mars-kargo-backend',
+      name: 'mars-kargo-backend:7021',
       script: './dist/index.js', // Compiled JavaScript (Run: npm run build first)
       exec_mode: 'fork', // Must be 'fork' (do NOT use 'cluster' for TypeScript/Node apps)
       instances: 1,
@@ -18,7 +18,7 @@ module.exports = {
         SMTP_SECURE: 'true',
         SMTP_USER: 'admin@mscode.id',
         SMTP_PASS: 'kiwx rpro syxc kbax',
-        BASE_URL: 'https://mars-api-cargo.mscode.id',
+        BASE_URL: 'https://apps-api.marscargo.net',
         GOOGLE_WEB_CLIENT_ID: '912101013229-j9lh8nku0fqqet57r0rhrrd2jdnjmgqh.apps.googleusercontent.com',
       },
     },
