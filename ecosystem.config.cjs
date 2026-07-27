@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'mars-kargo-backend',
-      script: './src/index.ts',
-      interpreter: './node_modules/.bin/tsx',
+      script: './dist/index.js', // Compiled JavaScript (Run: npm run build first)
+      exec_mode: 'fork', // Must be 'fork' (do NOT use 'cluster' for TypeScript/Node apps)
       instances: 1,
       autorestart: true,
       watch: false,
