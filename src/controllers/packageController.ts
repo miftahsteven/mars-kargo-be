@@ -411,8 +411,14 @@ export class PackageController {
       const filePath = path.join(uploadDir, filename);
       fs.writeFileSync(filePath, buffer);
 
-      const host = req.headers.host || 'localhost:7030';
-      const protocol = req.protocol || 'http';
+      const forwardedProto = req.headers['x-forwarded-proto'] as string;
+      const forwardedHost = req.headers['x-forwarded-host'] as string;
+      const protocol = forwardedProto || (req.secure ? 'https' : 'http');
+      let host = forwardedHost || req.headers.host || 'apps-api.marscargo.net';
+      if (host.includes('localhost') || host.includes('127.0.0.1')) {
+        host = 'apps-api.marscargo.net';
+      }
+
       const fileUrl = `${protocol}://${host}/uploads/${filename}`;
 
       res.status(200).json({
