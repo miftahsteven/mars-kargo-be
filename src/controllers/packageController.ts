@@ -19,13 +19,25 @@ export class PackageController {
           whereClause = {
             OR: [
               { courierId: filterId },
+              { courierName: { contains: filterId, mode: 'insensitive' } },
               { courierId: null },
+              { courierName: null },
             ],
           };
         }
 
         tasks = await prisma.deliveryTask.findMany({
           where: whereClause,
+          include: {
+            courier: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                nip: true,
+              },
+            },
+          },
           orderBy: { createdAt: 'desc' },
         });
       } catch (e) {
@@ -52,6 +64,16 @@ export class PackageController {
       try {
         pkg = await prisma.deliveryTask.findFirst({
           where: { resi: { equals: resi, mode: 'insensitive' } },
+          include: {
+            courier: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                nip: true,
+              },
+            },
+          },
         });
       } catch (e) {
         pkg = null;
@@ -100,6 +122,16 @@ export class PackageController {
               latitude: latitude ? parseFloat(latitude) : existing.latitude,
               longitude: longitude ? parseFloat(longitude) : existing.longitude,
             },
+            include: {
+              courier: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  email: true,
+                  nip: true,
+                },
+              },
+            },
           });
         }
       } catch (e) {
@@ -132,6 +164,7 @@ export class PackageController {
         pickupPhotoUrl,
         notes,
         courierId,
+        courierName,
         latitude,
         longitude,
         dashboardLat,
@@ -158,6 +191,26 @@ export class PackageController {
           where: { resi: { equals: resi.trim(), mode: 'insensitive' } },
         });
 
+        let validCourierId: string | null = courierId || null;
+        if (validCourierId) {
+          const userMatch = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { id: validCourierId },
+                { email: validCourierId },
+                { nip: validCourierId },
+              ],
+            },
+          });
+          if (userMatch) {
+            validCourierId = userMatch.id;
+          } else {
+            validCourierId = null;
+          }
+        }
+
+        const finalCourierName = courierName || (courierId && courierId.includes('@') ? courierId : null) || courierId || 'Kurir Mars Kargo';
+
         if (existing) {
           if (existing.status === 'Delivered' || existing.status === 'Terkirim') {
             res.status(400).json({
@@ -173,7 +226,8 @@ export class PackageController {
             data: {
               status: 'Dalam Transit',
               pickupPhotoUrl: pickupPhotoUrl || existing.pickupPhotoUrl,
-              courierId: courierId || existing.courierId,
+              courierId: validCourierId || existing.courierId,
+              courierName: finalCourierName || existing.courierName,
               notes: notes || existing.notes || 'Dipickup oleh kurir dari scan barcode',
               latitude: pLat !== undefined ? pLat : existing.latitude,
               longitude: pLng !== undefined ? pLng : existing.longitude,
@@ -181,6 +235,16 @@ export class PackageController {
               dashboardLng: dLng !== undefined ? dLng : existing.dashboardLng,
               scanLat: sLat !== undefined ? sLat : existing.scanLat,
               scanLng: sLng !== undefined ? sLng : existing.scanLng,
+            },
+            include: {
+              courier: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  email: true,
+                  nip: true,
+                },
+              },
             },
           });
         } else {
@@ -196,13 +260,24 @@ export class PackageController {
               status: 'Dalam Transit',
               pickupPhotoUrl: pickupPhotoUrl || null,
               notes: notes || 'Dipickup oleh kurir dari scan barcode',
-              courierId: courierId || null,
+              courierId: validCourierId,
+              courierName: finalCourierName,
               latitude: pLat,
               longitude: pLng,
               dashboardLat: dLat,
               dashboardLng: dLng,
               scanLat: sLat,
               scanLng: sLng,
+            },
+            include: {
+              courier: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  email: true,
+                  nip: true,
+                },
+              },
             },
           });
         }

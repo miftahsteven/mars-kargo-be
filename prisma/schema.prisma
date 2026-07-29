@@ -102,6 +102,7 @@ model DeliveryTask {
   recipientSignedName String?
   notes               String?
   courierId           String?
+  courierName         String?
   courier             User?    @relation(fields: [courierId], references: [id], onDelete: SetNull)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
