@@ -90,6 +90,12 @@ model DeliveryTask {
   category            String   @default("Buku / Bahan Bacaan")
   latitude            Float?
   longitude           Float?
+  dashboardLat        Float?
+  dashboardLng        Float?
+  scanLat             Float?
+  scanLng             Float?
+  shareLat            Float?
+  shareLng            Float?
   pickupPhotoUrl      String?
   proofPhotoUrl       String?
   proofSignatureUrl   String?

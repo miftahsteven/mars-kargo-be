@@ -9,9 +9,23 @@ export class PackageController {
    */
   public static async getPackages(req: Request, res: Response): Promise<void> {
     try {
+      const { courierId, userId, nip } = req.query;
       let tasks: any[] = [];
       try {
+        const filterId = (courierId || userId || nip) ? String(courierId || userId || nip) : null;
+        let whereClause: any = {};
+
+        if (filterId) {
+          whereClause = {
+            OR: [
+              { courierId: filterId },
+              { courierId: null },
+            ],
+          };
+        }
+
         tasks = await prisma.deliveryTask.findMany({
+          where: whereClause,
           orderBy: { createdAt: 'desc' },
         });
       } catch (e) {
@@ -120,12 +134,23 @@ export class PackageController {
         courierId,
         latitude,
         longitude,
+        dashboardLat,
+        dashboardLng,
+        scanLat,
+        scanLng,
       } = req.body;
 
       if (!resi) {
         res.status(400).json({ success: false, message: 'Nomor resi wajib diisi.' });
         return;
       }
+
+      const pLat = latitude ? parseFloat(latitude) : undefined;
+      const pLng = longitude ? parseFloat(longitude) : undefined;
+      const dLat = dashboardLat ? parseFloat(dashboardLat) : undefined;
+      const dLng = dashboardLng ? parseFloat(dashboardLng) : undefined;
+      const sLat = scanLat ? parseFloat(scanLat) : undefined;
+      const sLng = scanLng ? parseFloat(scanLng) : undefined;
 
       let task: any = null;
       try {
@@ -150,8 +175,12 @@ export class PackageController {
               pickupPhotoUrl: pickupPhotoUrl || existing.pickupPhotoUrl,
               courierId: courierId || existing.courierId,
               notes: notes || existing.notes || 'Dipickup oleh kurir dari scan barcode',
-              latitude: latitude ? parseFloat(latitude) : existing.latitude,
-              longitude: longitude ? parseFloat(longitude) : existing.longitude,
+              latitude: pLat !== undefined ? pLat : existing.latitude,
+              longitude: pLng !== undefined ? pLng : existing.longitude,
+              dashboardLat: dLat !== undefined ? dLat : existing.dashboardLat,
+              dashboardLng: dLng !== undefined ? dLng : existing.dashboardLng,
+              scanLat: sLat !== undefined ? sLat : existing.scanLat,
+              scanLng: sLng !== undefined ? sLng : existing.scanLng,
             },
           });
         } else {
@@ -168,10 +197,29 @@ export class PackageController {
               pickupPhotoUrl: pickupPhotoUrl || null,
               notes: notes || 'Dipickup oleh kurir dari scan barcode',
               courierId: courierId || null,
-              latitude: latitude ? parseFloat(latitude) : undefined,
-              longitude: longitude ? parseFloat(longitude) : undefined,
+              latitude: pLat,
+              longitude: pLng,
+              dashboardLat: dLat,
+              dashboardLng: dLng,
+              scanLat: sLat,
+              scanLng: sLng,
             },
           });
+        }
+
+        // Log scan event with smartphone GPS coordinates to ScanLog
+        try {
+          await prisma.scanLog.create({
+            data: {
+              resi: resi.trim(),
+              barcodeData: resi.trim(),
+              latitude: sLat !== undefined ? sLat : pLat || null,
+              longitude: sLng !== undefined ? sLng : pLng || null,
+              userId: courierId || null,
+            },
+          });
+        } catch (e) {
+          console.warn('[PackageController] ScanLog insert error:', e);
         }
       } catch (e) {
         console.warn('[PackageController] Prisma error during pickup, returning mockup fallback task:', e);
@@ -195,6 +243,63 @@ export class PackageController {
       });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Gagal melakukan pickup paket.' });
+    }
+  }
+
+  /**
+   * Share Location / Berbagi Lokasi real-time by Courier for a package
+   */
+  public static async shareLocation(req: Request, res: Response): Promise<void> {
+    try {
+      const { resi, latitude, longitude, courierId, address } = req.body;
+
+      if (!resi || latitude === undefined || longitude === undefined) {
+        res.status(400).json({ success: false, message: 'Nomor resi dan koordinat (latitude & longitude) wajib diisi.' });
+        return;
+      }
+
+      const pLat = parseFloat(latitude);
+      const pLng = parseFloat(longitude);
+
+      let updatedTask: any = null;
+      try {
+        const existing = await prisma.deliveryTask.findFirst({
+          where: { resi: { equals: String(resi).trim(), mode: 'insensitive' } },
+        });
+
+        if (existing) {
+          updatedTask = await prisma.deliveryTask.update({
+            where: { id: existing.id },
+            data: {
+              shareLat: pLat,
+              shareLng: pLng,
+              latitude: pLat,
+              longitude: pLng,
+            },
+          });
+        }
+
+        if (courierId) {
+          await prisma.gPSLocationLog.create({
+            data: {
+              userId: String(courierId),
+              latitude: pLat,
+              longitude: pLng,
+              isOnline: true,
+            },
+          }).catch(() => null);
+        }
+      } catch (e) {
+        console.warn('[PackageController] Error in shareLocation:', e);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Lokasi real-time kurir berhasil dibagikan (${pLat}, ${pLng}).`,
+        data: updatedTask,
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Gagal membagikan lokasi kurir.' });
     }
   }
 
@@ -259,6 +364,75 @@ export class PackageController {
       });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Gagal melaporkan kendala paket.' });
+    }
+  }
+
+  /**
+   * Fetch Active Kendala / Issue Reports for Web Dashboard & Mobile Apps
+   */
+  public static async getKendala(req: Request, res: Response): Promise<void> {
+    try {
+      let issues: any[] = [];
+      try {
+        issues = await prisma.issueReport.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        });
+      } catch (e) {
+        console.warn('[PackageController] Error fetching issue reports from DB:', e);
+      }
+
+      let berkendalaTasks: any[] = [];
+      try {
+        berkendalaTasks = await prisma.deliveryTask.findMany({
+          where: { status: { equals: 'Berkendala', mode: 'insensitive' } },
+          orderBy: { updatedAt: 'desc' },
+          take: 50,
+        });
+      } catch (e) {
+        console.warn('[PackageController] Error fetching berkendala tasks from DB:', e);
+      }
+
+      const combined = issues.map((iss: any) => {
+        const matchingTask = berkendalaTasks.find((t) => t.resi.toLowerCase() === iss.resi.toLowerCase());
+        return {
+          id: iss.id,
+          resi: iss.resi,
+          proyek: matchingTask?.category || 'Distribusi Buku / Bahan Bacaan',
+          issue: iss.description || matchingTask?.notes || 'Kendala dilaporkan kurir',
+          lokasi: iss.newAddress || matchingTask?.recipientAddress || 'Lokasi tidak diketahui',
+          newPhone: iss.newPhone || matchingTask?.recipientPhone || null,
+          since: iss.createdAt ? new Date(iss.createdAt).toISOString() : new Date().toISOString(),
+          courierId: iss.courierId || matchingTask?.courierId || null,
+          latitude: iss.latitude || matchingTask?.latitude || null,
+          longitude: iss.longitude || matchingTask?.longitude || null,
+        };
+      });
+
+      for (const task of berkendalaTasks) {
+        if (!combined.some((c) => c.resi.toLowerCase() === task.resi.toLowerCase())) {
+          combined.push({
+            id: task.id,
+            resi: task.resi,
+            proyek: task.category || 'Distribusi Buku / Bahan Bacaan',
+            issue: task.notes || 'Kendala pengiriman dilaporkan kurir',
+            lokasi: task.recipientAddress || 'Lokasi tidak diketahui',
+            newPhone: task.recipientPhone || null,
+            since: task.updatedAt ? new Date(task.updatedAt).toISOString() : new Date().toISOString(),
+            courierId: task.courierId || null,
+            latitude: task.latitude || null,
+            longitude: task.longitude || null,
+          });
+        }
+      }
+
+      res.status(200).json({
+        status: 'success',
+        success: true,
+        data: combined,
+      });
+    } catch (error) {
+      res.status(500).json({ status: 'error', success: false, message: 'Gagal mengambil data kendala aktif.' });
     }
   }
 
@@ -419,7 +593,7 @@ export class PackageController {
         host = 'apps-api.marscargo.net';
       }
 
-      const fileUrl = `${protocol}://${host}/uploads/${filename}`;
+      const fileUrl = `${protocol}://${host}/api/uploads/${filename}`;
 
       res.status(200).json({
         success: true,
