@@ -131,3 +131,41 @@ model IssueReport {
   status      String   @default("OPEN")
   createdAt   DateTime @default(now())
 }
+
+model DistribusiReal {
+  id              String    @id @default(uuid())
+  no              Int?
+  noResi          String    @unique
+  tanggal         String?
+  pengirim        String?
+  telepon         String?
+  alamatPengirim  String?
+  penerima        String
+  npsn            String?
+  namaPenerima    String?
+  alamatPenerima  String?
+  kecamatan       String
+  kabupatenKota   String
+  provinsi        String
+  kodePos         String?
+  jenisBarang     String?
+  koli            Int       @default(1)
+  kg              Float?
+  service         String?   @default("REGULER")
+  origin          String?   @default("JAKARTA")
+  destination     String?
+  pembayaran      String?
+  status          String    @default("Terkirim")
+  schoolCategory  String    @default("SD") // SD, SMP, SMA, LAINNYA
+  uploadBatchId   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([provinsi])
+  @@index([kabupatenKota])
+  @@index([kecamatan])
+  @@index([kodePos])
+  @@index([schoolCategory])
+  @@index([noResi])
+}
+

@@ -5,6 +5,7 @@ import authRoutes from './routes/authRoutes.js';
 import packageRoutes from './routes/packageRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import distribusiRealRoutes from './routes/distribusiRealRoutes.js';
 
 import path from 'path';
 import fs from 'fs';
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/distribusi-real', distribusiRealRoutes);
 
 // Healthcheck Route
 app.get('/api/health', (req, res) => {
