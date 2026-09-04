@@ -15,24 +15,7 @@ function detectSchoolCategory(name: string): string {
   ) {
     return 'SD';
   }
-  if (
-    upper.startsWith('SMP') ||
-    upper.startsWith('MTS') ||
-    upper.includes('MENENGAH PERTAMA') ||
-    upper.includes('MADRASAH TSANAWIYAH')
-  ) {
-    return 'SMP';
-  }
-  if (
-    upper.startsWith('SMA') ||
-    upper.startsWith('SMK') ||
-    upper.startsWith('MA ') ||
-    upper.includes('MENENGAH ATAS') ||
-    upper.includes('KEJURUAN') ||
-    upper.includes('MADRASAH ALIYAH')
-  ) {
-    return 'SMA';
-  }
+  // Hanya 2 jenis sekolah: SD dan LAINNYA (SMP/MTS/SMA/PKBM/Lainnya)
   return 'LAINNYA';
 }
 

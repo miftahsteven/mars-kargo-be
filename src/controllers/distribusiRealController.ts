@@ -23,24 +23,7 @@ function detectSchoolCategory(name: string): string {
   ) {
     return 'SD';
   }
-  if (
-    upper.startsWith('SMP') ||
-    upper.startsWith('MTS') ||
-    upper.includes('MENENGAH PERTAMA') ||
-    upper.includes('MADRASAH TSANAWIYAH')
-  ) {
-    return 'SMP';
-  }
-  if (
-    upper.startsWith('SMA') ||
-    upper.startsWith('SMK') ||
-    upper.startsWith('MA ') ||
-    upper.includes('MENENGAH ATAS') ||
-    upper.includes('KEJURUAN') ||
-    upper.includes('MADRASAH ALIYAH')
-  ) {
-    return 'SMA';
-  }
+  // Hanya ada 2 jenis sekolah: SD dan LAINNYA (SMP/MTS/SMA/PKBM/Lainnya)
   return 'LAINNYA';
 }
 
@@ -317,21 +300,30 @@ export class DistribusiRealController {
         _count: { noResi: true },
       });
 
-      const categoriesOrder = ['SD', 'SMP', 'SMA', 'LAINNYA'];
+      const categoriesOrder = ['SD', 'LAINNYA'];
       const categoryLabels: Record<string, string> = {
-        SD: 'Sekolah Dasar / MI',
-        SMP: 'Sekolah Menengah Pertama / MTs',
-        SMA: 'Sekolah Menengah Atas / SMK / MA',
-        LAINNYA: 'PKBM & Lembaga Pendidikan Lainnya',
+        SD: 'SD / MI',
+        LAINNYA: 'SMP / MTs / SMA / PKBM / Lainnya',
       };
 
       let totalSchools = 0;
       let totalVolume = 0;
 
       const categories = categoriesOrder.map((catKey) => {
-        const found = categoryAgg.find((c) => c.schoolCategory === catKey);
-        const count = found?._count.noResi || 0;
-        const vol = found?._sum.koli || 0;
+        let count = 0;
+        let vol = 0;
+
+        if (catKey === 'LAINNYA') {
+          // Semua selain SD masuk ke LAINNYA (SMP/MTS/SMA/PKBM/Lainnya)
+          const matched = categoryAgg.filter((c) => c.schoolCategory !== 'SD');
+          count = matched.reduce((acc, curr) => acc + (curr._count.noResi || 0), 0);
+          vol = matched.reduce((acc, curr) => acc + (curr._sum.koli || 0), 0);
+        } else {
+          const found = categoryAgg.find((c) => c.schoolCategory === 'SD');
+          count = found?._count.noResi || 0;
+          vol = found?._sum.koli || 0;
+        }
+
         totalSchools += count;
         totalVolume += vol;
         return {
@@ -345,7 +337,12 @@ export class DistribusiRealController {
       // Filter for school list
       const listWhere = { ...baseWhere };
       if (category && category !== 'ALL') {
-        listWhere.schoolCategory = category;
+        const catUpper = category.toUpperCase();
+        if (catUpper === 'SD') {
+          listWhere.schoolCategory = 'SD';
+        } else {
+          listWhere.schoolCategory = { not: 'SD' };
+        }
       }
 
       if (search) {
@@ -373,7 +370,7 @@ export class DistribusiRealController {
         resi: s.noResi,
         name: s.penerima,
         npsn: s.npsn || '-',
-        category: s.schoolCategory,
+        category: s.schoolCategory === 'SD' ? 'SD' : 'LAINNYA',
         kecamatan: s.kecamatan,
         kodePos: s.kodePos || '-',
         volumeKoli: s.koli,
