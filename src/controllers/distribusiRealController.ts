@@ -99,21 +99,24 @@ export class DistribusiRealController {
         by: ['provinsi'],
         _sum: { koli: true },
         _count: { noResi: true },
-        orderBy: { _sum: { koli: 'desc' } },
+        orderBy: { _count: { noResi: 'desc' } },
       });
 
-      const totalVolumeAll = result.reduce((acc, curr) => acc + (curr._sum.koli || 0), 0);
+      const totalShipmentsAll = result.reduce((acc, curr) => acc + curr._count.noResi, 0);
+      const totalKoliAll = result.reduce((acc, curr) => acc + (curr._sum.koli || 0), 0);
 
       const provinces = result.map((r) => ({
         name: r.provinsi,
-        volume: r._sum.koli || 0,
+        volume: r._count.noResi, // Menampilkan jumlah baris/resi pengiriman (Sumut: 2.452, Jabar: 2.307 sesuai Excel)
         shipments: r._count.noResi,
-        sharePercentage: totalVolumeAll > 0 ? (((r._sum.koli || 0) / totalVolumeAll) * 100).toFixed(2) : '0',
+        koliVolume: r._sum.koli || 0,
+        sharePercentage: totalShipmentsAll > 0 ? (((r._count.noResi) / totalShipmentsAll) * 100).toFixed(2) : '0',
       }));
 
       res.status(200).json({
         success: true,
-        totalVolume: totalVolumeAll,
+        totalVolume: totalShipmentsAll,
+        totalKoli: totalKoliAll,
         totalCount: provinces.length,
         data: provinces,
       });
@@ -142,19 +145,21 @@ export class DistribusiRealController {
         },
         _sum: { koli: true },
         _count: { noResi: true },
-        orderBy: { _sum: { koli: 'desc' } },
+        orderBy: { _count: { noResi: 'desc' } },
       });
 
-      const provinceTotal = regenciesData.reduce((acc, curr) => acc + (curr._sum.koli || 0), 0);
+      const provinceTotalShipments = regenciesData.reduce((acc, curr) => acc + curr._count.noResi, 0);
+      const provinceTotalKoli = regenciesData.reduce((acc, curr) => acc + (curr._sum.koli || 0), 0);
 
       const regencies = regenciesData.map((reg, idx) => {
-        const vol = reg._sum.koli || 0;
-        const percentage = provinceTotal > 0 ? ((vol / provinceTotal) * 100).toFixed(1) : '0';
+        const count = reg._count.noResi;
+        const percentage = provinceTotalShipments > 0 ? ((count / provinceTotalShipments) * 100).toFixed(1) : '0';
         return {
           id: `reg-${idx + 1}`,
           name: reg.kabupatenKota,
-          volume: vol,
-          shipments: reg._count.noResi,
+          volume: count, // Menggunakan jumlah pengiriman / resi sesuai Excel
+          koliVolume: reg._sum.koli || 0,
+          shipments: count,
           percentage: parseFloat(percentage),
           slaOnTime: 98.5 + (idx % 10) * 0.1, // SLA indicator
         };
@@ -163,7 +168,8 @@ export class DistribusiRealController {
       res.status(200).json({
         success: true,
         provinceName: cleanProv,
-        totalVolume: provinceTotal,
+        totalVolume: provinceTotalShipments,
+        totalKoli: provinceTotalKoli,
         regencies,
       });
     } catch (error: any) {
@@ -255,7 +261,8 @@ export class DistribusiRealController {
         id: `sub-${item.kecamatan}-${item.kodePos}-${startIndex + idx + 1}`,
         kecamatan: item.kecamatan,
         kodePos: item.kodePos || '-',
-        volume: item._sum.koli || 0,
+        volume: item._count.noResi, // Menggunakan jumlah pengiriman / resi sesuai Excel
+        koliVolume: item._sum.koli || 0,
         shipments: item._count.noResi,
         kabupaten: kabupaten,
         provinsi: cleanProv,
