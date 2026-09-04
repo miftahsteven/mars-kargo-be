@@ -15,8 +15,8 @@ function detectSchoolCategory(name: string): string {
   ) {
     return 'SD';
   }
-  // Hanya 2 jenis sekolah: SD dan LAINNYA (SMP/MTS/SMA/PKBM/Lainnya)
-  return 'LAINNYA';
+  // Hanya 2 jenis sekolah: SD dan SMP (mencakup SMP/MTS/SMA/PKBM/Lainnya)
+  return 'SMP';
 }
 
 function cleanProvince(prov: string): string {

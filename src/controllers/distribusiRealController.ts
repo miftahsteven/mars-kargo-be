@@ -23,8 +23,8 @@ function detectSchoolCategory(name: string): string {
   ) {
     return 'SD';
   }
-  // Hanya ada 2 jenis sekolah: SD dan LAINNYA (SMP/MTS/SMA/PKBM/Lainnya)
-  return 'LAINNYA';
+  // Hanya ada 2 jenis sekolah: SD dan SMP (mencakup SMP/MTS/SMA/PKBM/Lainnya)
+  return 'SMP';
 }
 
 export class DistribusiRealController {
@@ -300,10 +300,10 @@ export class DistribusiRealController {
         _count: { noResi: true },
       });
 
-      const categoriesOrder = ['SD', 'LAINNYA'];
+      const categoriesOrder = ['SD', 'SMP'];
       const categoryLabels: Record<string, string> = {
         SD: 'SD / MI',
-        LAINNYA: 'SMP / MTs / SMA / PKBM / Lainnya',
+        SMP: 'SMP / MTs / Lainnya',
       };
 
       let totalSchools = 0;
@@ -313,8 +313,8 @@ export class DistribusiRealController {
         let count = 0;
         let vol = 0;
 
-        if (catKey === 'LAINNYA') {
-          // Semua selain SD masuk ke LAINNYA (SMP/MTS/SMA/PKBM/Lainnya)
+        if (catKey === 'SMP') {
+          // Semua selain SD masuk ke SMP (SMP/MTS/SMA/PKBM/Lainnya)
           const matched = categoryAgg.filter((c) => c.schoolCategory !== 'SD');
           count = matched.reduce((acc, curr) => acc + (curr._count.noResi || 0), 0);
           vol = matched.reduce((acc, curr) => acc + (curr._sum.koli || 0), 0);
@@ -370,7 +370,7 @@ export class DistribusiRealController {
         resi: s.noResi,
         name: s.penerima,
         npsn: s.npsn || '-',
-        category: s.schoolCategory === 'SD' ? 'SD' : 'LAINNYA',
+        category: s.schoolCategory === 'SD' ? 'SD' : 'SMP',
         kecamatan: s.kecamatan,
         kodePos: s.kodePos || '-',
         volumeKoli: s.koli,
